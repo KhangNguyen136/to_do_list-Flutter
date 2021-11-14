@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:todo_list/source/model/db_handle.dart';
-import 'package:todo_list/source/model/item.dart';
+import 'package:todo_list/source/model/item/item_handle.dart';
+import 'package:todo_list/source/model/item/item.dart';
 import 'package:todo_list/source/widget/screen/add_item_screen.dart';
 
 class ToDoItem extends StatelessWidget {
-  ToDoItem({Key? key, required this.item}) : super(key: key);
+  ToDoItem({Key? key, required this.item, required this.reload})
+      : super(key: key);
   final Item? item;
+  Function reload;
   // final reload;
-  late DatabaseHandler handler = DatabaseHandler();
+  late ItemHandler handler = ItemHandler();
   @override
   Widget build(BuildContext context) {
     DateTime date = DateTime.fromMillisecondsSinceEpoch(item!.date);
 
     edit() {
       Navigator.pushNamed(context, '/addItem',
-          arguments: ScreenArg(true, item));
+          arguments: ScreenArg(true, item, reload));
     }
 
     delete() {
-      handler
-          .deleteItem(item!.id)
-          .whenComplete(() => _showMyDialog1('Deleted', item!.title, context));
+      handler.deleteItem(item!.id).whenComplete(
+          () => {_showMyDialog1('Deleted', item!.title, context), reload()});
     }
 
     done() {
       item!.done = (item!.done - 1).abs();
-      handler.updateItem(item!);
+      handler.updateItem(item!).whenComplete(() => reload());
     }
 
     // TODO: implement build
@@ -42,6 +43,9 @@ class ToDoItem extends StatelessWidget {
                         Container(
                           child: Icon(
                             Icons.bookmark,
+                            color: item!.done == 0
+                                ? Color(0xFFf0932b)
+                                : Color(0xFF6ab04c),
                             size: 18,
                           ),
                           margin: EdgeInsets.fromLTRB(0, 5, 10, 5),
@@ -78,6 +82,7 @@ class ToDoItem extends StatelessWidget {
                         Container(
                           child: const Icon(
                             Icons.calendar_today,
+                            color: Color(0xFF22a6b3),
                             size: 16,
                           ),
                           margin: const EdgeInsets.fromLTRB(0, 0, 10, 5),
@@ -93,6 +98,7 @@ class ToDoItem extends StatelessWidget {
                         Container(
                           child: const Icon(
                             Icons.timer,
+                            color: Color(0xff686de0),
                             size: 16,
                           ),
                           margin: const EdgeInsets.fromLTRB(0, 0, 10, 5),
@@ -111,7 +117,10 @@ class ToDoItem extends StatelessWidget {
                 onPressed: edit,
               ),
               IconButton(
-                icon: Icon(Icons.delete),
+                icon: Icon(
+                  Icons.delete,
+                  color: Color(0xFFeb4d4b),
+                ),
                 onPressed: () {
                   _showMyDialog(
                       "Delete item",

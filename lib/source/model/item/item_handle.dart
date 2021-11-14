@@ -1,12 +1,12 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:todo_list/source/model/item.dart';
+import 'package:todo_list/source/model/item/item.dart';
 
-class DatabaseHandler {
+class ItemHandler {
   Future<Database> initializeDB() async {
     String path = await getDatabasesPath();
     return openDatabase(
-      join(path, 'database.db'),
+      join(path, 'item.db'),
       onCreate: (database, version) async {
         await database.execute(
           "CREATE TABLE if not exists itemTable(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,description text,date INTEGER NOT NULL, done integer NOT NULL)",
@@ -25,7 +25,7 @@ class DatabaseHandler {
     return result;
   }
 
-  Future<List<Item>> retrieveItems(String type) async {
+  Future<List<Item>> retrieveItems(String type, String searchKey) async {
     final Database db = await initializeDB();
     final List<Map<String, Object?>> queryResult = await db.query('itemTable');
     var list = queryResult.map((e) => Item.fromMap(e)).toList();
@@ -33,18 +33,28 @@ class DatabaseHandler {
     switch (type) {
       case 'Today':
         for (var id = 0; id < list.length; id++) {
-          DateTime date = DateTime.fromMillisecondsSinceEpoch(list[id].date);
-          if (isToday(date)) result.add(list[id]);
+          Item item = list[id];
+          DateTime date = DateTime.fromMillisecondsSinceEpoch(item.date);
+          if (isToday(date) && checkSearchKey(searchKey, item)) {
+            insertIntoArray(result, item);
+          }
         }
         return result;
       case 'Upcoming':
         for (var id = 0; id < list.length; id++) {
           DateTime date = DateTime.fromMillisecondsSinceEpoch(list[id].date);
-          if (isUpcoming(date)) result.add(list[id]);
+          if (isUpcoming(date) && checkSearchKey(searchKey, list[id])) {
+            insertIntoArray(result, list[id]);
+          }
         }
         return result;
       default:
-        return list;
+        for (var id = 0; id < list.length; id++) {
+          if (checkSearchKey(searchKey, list[id])) {
+            insertIntoArray(result, list[id]);
+          }
+        }
+        return result;
     }
   }
 
@@ -54,7 +64,7 @@ class DatabaseHandler {
       'itemTable',
       where: "id = ?",
       whereArgs: [id],
-    ).whenComplete(() => {print('deleted')});
+    );
   }
 
   Future<void> updateItem(Item item) async {
@@ -72,6 +82,27 @@ class DatabaseHandler {
   }
 }
 
+void insertIntoArray(List<Item> arr, Item item) {
+  if (arr.isEmpty) {
+    arr.add(item);
+    return;
+  }
+  for (var id = 0; id < arr.length; id++) {
+    if (arr[id].date > item.date) {
+      arr.insert(id, item);
+      return;
+    }
+  }
+  arr.add(item);
+}
+
+bool checkSearchKey(String searchKey, Item item) {
+  if (searchKey == '' || searchKey.isEmpty) return true;
+  String key = searchKey.toLowerCase();
+  return item.title.toLowerCase().contains(key) ||
+      item.description.toLowerCase().contains(key);
+}
+
 bool isToday(DateTime date) {
   DateTime today = DateTime.now();
   return date.day == today.day &&
@@ -81,9 +112,9 @@ bool isToday(DateTime date) {
 
 bool isUpcoming(DateTime date) {
   DateTime today = DateTime.now();
-  if (date.year > today.year)
+  if (date.year > today.year) {
     return true;
-  else if (date.year < today.year) {
+  } else if (date.year < today.year) {
     return false;
   } else {
     if (date.month > today.month) {

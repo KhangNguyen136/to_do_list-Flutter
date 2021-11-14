@@ -60,7 +60,7 @@ class HomeScreen extends StatelessWidget {
             child: FloatingActionButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/addItem',
-                      arguments: ScreenArg(false, null));
+                      arguments: ScreenArg(false, null, () {}));
                 },
                 child: Icon(Icons.add)),
             margin: EdgeInsets.all(15),

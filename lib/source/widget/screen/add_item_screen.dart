@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
-import 'package:todo_list/source/model/db_handle.dart';
-import 'package:todo_list/source/model/item.dart';
+import 'package:todo_list/source/model/item/item_handle.dart';
+import 'package:todo_list/source/model/item/item.dart';
 
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({Key? key}) : super(key: key);
@@ -16,7 +16,8 @@ class AddItemScreen extends StatefulWidget {
 class ScreenArg {
   bool isEdit;
   Item? item;
-  ScreenArg(this.isEdit, this.item);
+  Function reload;
+  ScreenArg(this.isEdit, this.item, this.reload);
 }
 
 class AddItemScreenState extends State<AddItemScreen> {
@@ -24,14 +25,15 @@ class AddItemScreenState extends State<AddItemScreen> {
   bool warning = false;
   final descriptController = TextEditingController();
   DateTime date = new DateTime.now();
-  late DatabaseHandler handler;
+  late ItemHandler handler;
   bool isEdit = false;
+  Function reload = () {};
   Item item = Item(-1, '', '', 0, 0);
 
   @override
   void initState() {
     super.initState();
-    handler = DatabaseHandler();
+    handler = ItemHandler();
     WidgetsBinding.instance!.addPostFrameCallback((_) {
       afterFirstLayout(context);
     });
@@ -67,7 +69,8 @@ class AddItemScreenState extends State<AddItemScreen> {
                     titleController.text = '';
                     descriptController.text = '';
                     date = DateTime.now();
-                  })
+                  }),
+                  reload(),
                 })
             .catchError((error) =>
                 {_showMyDialog('Action failed', error.toString(), context)});
@@ -77,11 +80,14 @@ class AddItemScreenState extends State<AddItemScreen> {
         item.date = date.millisecondsSinceEpoch;
         handler
             .updateItem(item)
-            .whenComplete(
-                () => _showMyDialog('Update successfully', '', context))
+            .whenComplete(() => {
+                  _showMyDialog('Update successfully', '', context),
+                  reload(),
+                })
             .catchError((error) =>
                 _showMyDialog("Action failed", error.toString(), context));
       }
+      Navigator.pop(context);
     }
 
     pickDate() {
@@ -157,7 +163,9 @@ class AddItemScreenState extends State<AddItemScreen> {
                   ),
                   TextButton(
                     onPressed: pickDate,
-                    child: Text(date.toString().substring(0, 16)),
+                    child: Text(date.toString().substring(0, 10) +
+                        '     ' +
+                        date.toString().substring(11, 16)),
                     // paintBorder
                   ),
                 ],
@@ -186,6 +194,7 @@ class AddItemScreenState extends State<AddItemScreen> {
   void afterFirstLayout(BuildContext context) {
     // Calling the same function "after layout" to resolve the issue.
     final arg = ModalRoute.of(context)!.settings.arguments as ScreenArg;
+    reload = arg.reload;
 
     if (arg.isEdit) {
       setState(() {

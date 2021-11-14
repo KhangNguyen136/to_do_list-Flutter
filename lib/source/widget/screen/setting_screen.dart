@@ -9,9 +9,9 @@ class SettingScreen extends StatelessWidget {
     final args = ModalRoute.of(context)!.settings.arguments;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SettingScreen'),
+        title: const Text('Setting'),
       ),
-      body: Center(child: Text(args.toString())),
+      body: Center(child: Text('Coming soon')),
     );
   }
 }
